@@ -1,0 +1,42 @@
+{
+  "model_type": "ForensiTapRobustEllipsoidalDetector",
+  "version": "1.0.0",
+  "feature_names": [
+    "frame_rate",
+    "byte_rate",
+    "average_frame_size",
+    "unique_peers",
+    "management_frame_ratio",
+    "traffic_burst_score",
+    "frame_rate_zscore"
+  ],
+  "medians": {
+    "frame_rate": 104.4,
+    "byte_rate": 20945.5,
+    "average_frame_size": 207.5,
+    "unique_peers": 16,
+    "management_frame_ratio": 0.182,
+    "traffic_burst_score": 1.93,
+    "frame_rate_zscore": 0.29
+  },
+  "mads": {
+    "frame_rate": 12.750359999999992,
+    "byte_rate": 3871.661640000002,
+    "average_frame_size": 20.90465999999999,
+    "unique_peers": 2.0,
+    "management_frame_ratio": 0.038547599999999994,
+    "traffic_burst_score": 0.415128,
+    "frame_rate_zscore": 0.7264740000000001
+  },
+  "weights": {
+    "frame_rate": 1.2,
+    "byte_rate": 1.0,
+    "average_frame_size": 0.8,
+    "unique_peers": 1.0,
+    "management_frame_ratio": 2.0,
+    "traffic_burst_score": 1.8,
+    "frame_rate_zscore": 1.5
+  },
+  "threshold": 9.018,
+  "contamination": 0.03
+}

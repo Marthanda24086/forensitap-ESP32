@@ -1,0 +1,374 @@
+{
+  "session_id": "20261107_221713",
+  "session_dir": "d:\\forensitap-ESP32\\datasets\\sessions\\session_20261107_221713",
+  "start_time": "2026-11-07T22:17:13.074193",
+  "duration_sec": 10.0,
+  "throughput_metrics": {
+    "samples": 5,
+    "fps_min": 33.6,
+    "fps_max": 184.0,
+    "fps_mean": 104.72,
+    "fps_median": 75.0,
+    "fps_std": 65.50490058003294,
+    "byte_rate_mean_kbs": 16.87462890625,
+    "byte_rate_peak_kbs": 19.80419921875,
+    "mgmt_ratio_mean": 0.2258,
+    "burst_score_max": 3.01,
+    "total_observed_frames": 115568,
+    "management_frames": 24218,
+    "data_frames": 91350,
+    "dropped_frames": 2815
+  },
+  "device_metrics": {
+    "unique_devices": 32,
+    "ap_count": 7,
+    "sta_count": 25,
+    "top_devices": [
+      {
+        "mac": "64:FB:92:C0:14:80",
+        "role": "AP",
+        "packets": 63290,
+        "rssi_mean": -68.2,
+        "rssi_min": -70,
+        "rssi_max": -67
+      },
+      {
+        "mac": "9E:A6:51:38:98:AD",
+        "role": "STA",
+        "packets": 14605,
+        "rssi_mean": -50.4,
+        "rssi_min": -51,
+        "rssi_max": -49
+      },
+      {
+        "mac": "64:FB:92:C0:14:81",
+        "role": "AP",
+        "packets": 9861,
+        "rssi_mean": -61,
+        "rssi_min": -63,
+        "rssi_max": -60
+      },
+      {
+        "mac": "9E:A2:F5:F9:EA:95",
+        "role": "STA",
+        "packets": 8391,
+        "rssi_mean": -49.8,
+        "rssi_min": -54,
+        "rssi_max": -44
+      },
+      {
+        "mac": "04:C8:07:2A:30:14",
+        "role": "STA",
+        "packets": 5283,
+        "rssi_mean": -74.2,
+        "rssi_min": -85,
+        "rssi_max": -67
+      },
+      {
+        "mac": "42:CF:AA:4B:B3:45",
+        "role": "STA",
+        "packets": 3930,
+        "rssi_mean": -62.2,
+        "rssi_min": -72,
+        "rssi_max": -53
+      },
+      {
+        "mac": "60:32:B1:9F:9E:10",
+        "role": "AP",
+        "packets": 2690,
+        "rssi_mean": -91,
+        "rssi_min": -92,
+        "rssi_max": -90
+      },
+      {
+        "mac": "80:9D:65:58:04:C8",
+        "role": "STA",
+        "packets": 1348,
+        "rssi_mean": -82.8,
+        "rssi_min": -84,
+        "rssi_max": -80
+      },
+      {
+        "mac": "00:04:EA:FB:F6:EC",
+        "role": "AP",
+        "packets": 1176,
+        "rssi_mean": -89.8,
+        "rssi_min": -93,
+        "rssi_max": -87
+      },
+      {
+        "mac": "80:9D:65:47:9B:52",
+        "role": "STA",
+        "packets": 710,
+        "rssi_mean": -87,
+        "rssi_min": -89,
+        "rssi_max": -85
+      }
+    ],
+    "all_devices": [
+      {
+        "mac": "64:FB:92:C0:14:80",
+        "role": "AP",
+        "packets": 63290,
+        "rssi_mean": -68.2,
+        "rssi_min": -70,
+        "rssi_max": -67
+      },
+      {
+        "mac": "9E:A6:51:38:98:AD",
+        "role": "STA",
+        "packets": 14605,
+        "rssi_mean": -50.4,
+        "rssi_min": -51,
+        "rssi_max": -49
+      },
+      {
+        "mac": "64:FB:92:C0:14:81",
+        "role": "AP",
+        "packets": 9861,
+        "rssi_mean": -61,
+        "rssi_min": -63,
+        "rssi_max": -60
+      },
+      {
+        "mac": "9E:A2:F5:F9:EA:95",
+        "role": "STA",
+        "packets": 8391,
+        "rssi_mean": -49.8,
+        "rssi_min": -54,
+        "rssi_max": -44
+      },
+      {
+        "mac": "04:C8:07:2A:30:14",
+        "role": "STA",
+        "packets": 5283,
+        "rssi_mean": -74.2,
+        "rssi_min": -85,
+        "rssi_max": -67
+      },
+      {
+        "mac": "42:CF:AA:4B:B3:45",
+        "role": "STA",
+        "packets": 3930,
+        "rssi_mean": -62.2,
+        "rssi_min": -72,
+        "rssi_max": -53
+      },
+      {
+        "mac": "60:32:B1:9F:9E:10",
+        "role": "AP",
+        "packets": 2690,
+        "rssi_mean": -91,
+        "rssi_min": -92,
+        "rssi_max": -90
+      },
+      {
+        "mac": "80:9D:65:58:04:C8",
+        "role": "STA",
+        "packets": 1348,
+        "rssi_mean": -82.8,
+        "rssi_min": -84,
+        "rssi_max": -80
+      },
+      {
+        "mac": "00:04:EA:FB:F6:EC",
+        "role": "AP",
+        "packets": 1176,
+        "rssi_mean": -89.8,
+        "rssi_min": -93,
+        "rssi_max": -87
+      },
+      {
+        "mac": "80:9D:65:47:9B:52",
+        "role": "STA",
+        "packets": 710,
+        "rssi_mean": -87,
+        "rssi_min": -89,
+        "rssi_max": -85
+      },
+      {
+        "mac": "50:2E:91:0A:02:B0",
+        "role": "STA",
+        "packets": 622,
+        "rssi_mean": -18.4,
+        "rssi_min": -19,
+        "rssi_max": -16
+      },
+      {
+        "mac": "74:FE:CE:93:4C:5C",
+        "role": "AP",
+        "packets": 109,
+        "rssi_mean": -90,
+        "rssi_min": -90,
+        "rssi_max": -90
+      },
+      {
+        "mac": "82:D0:B8:CA:9D:DF",
+        "role": "STA",
+        "packets": 89,
+        "rssi_mean": -30,
+        "rssi_min": -30,
+        "rssi_max": -30
+      },
+      {
+        "mac": "76:FE:CE:91:4C:5C",
+        "role": "AP",
+        "packets": 61,
+        "rssi_mean": -93,
+        "rssi_min": -93,
+        "rssi_max": -93
+      },
+      {
+        "mac": "F8:ED:FC:91:2D:BF",
+        "role": "STA",
+        "packets": 31,
+        "rssi_mean": -92,
+        "rssi_min": -92,
+        "rssi_max": -92
+      },
+      {
+        "mac": "06:32:F5:E7:D1:A2",
+        "role": "STA",
+        "packets": 30,
+        "rssi_mean": -35,
+        "rssi_min": -35,
+        "rssi_max": -35
+      },
+      {
+        "mac": "F4:28:9D:5A:B3:75",
+        "role": "STA",
+        "packets": 16,
+        "rssi_mean": -58,
+        "rssi_min": -58,
+        "rssi_max": -58
+      },
+      {
+        "mac": "C2:88:60:A8:0D:B9",
+        "role": "STA",
+        "packets": 14,
+        "rssi_mean": -50,
+        "rssi_min": -50,
+        "rssi_max": -50
+      },
+      {
+        "mac": "EC:63:D7:85:73:98",
+        "role": "STA",
+        "packets": 7,
+        "rssi_mean": -65,
+        "rssi_min": -65,
+        "rssi_max": -65
+      },
+      {
+        "mac": "0C:9A:3C:B3:B0:A5",
+        "role": "STA",
+        "packets": 3,
+        "rssi_mean": -59,
+        "rssi_min": -59,
+        "rssi_max": -59
+      },
+      {
+        "mac": "DA:A1:19:ED:07:B7",
+        "role": "STA",
+        "packets": 2,
+        "rssi_mean": -83,
+        "rssi_min": -83,
+        "rssi_max": -83
+      },
+      {
+        "mac": "78:BB:C1:1D:6D:71",
+        "role": "AP",
+        "packets": 2,
+        "rssi_mean": -63,
+        "rssi_min": -63,
+        "rssi_max": -63
+      },
+      {
+        "mac": "DA:A1:19:09:88:5C",
+        "role": "STA",
+        "packets": 2,
+        "rssi_mean": -85,
+        "rssi_min": -85,
+        "rssi_max": -85
+      },
+      {
+        "mac": "DA:A1:19:1D:1C:2C",
+        "role": "STA",
+        "packets": 2,
+        "rssi_mean": -86,
+        "rssi_min": -86,
+        "rssi_max": -86
+      },
+      {
+        "mac": "DA:A1:19:D1:F7:0B",
+        "role": "STA",
+        "packets": 2,
+        "rssi_mean": -88,
+        "rssi_min": -88,
+        "rssi_max": -88
+      },
+      {
+        "mac": "DA:A1:19:04:2F:4F",
+        "role": "STA",
+        "packets": 1,
+        "rssi_mean": -86,
+        "rssi_min": -86,
+        "rssi_max": -86
+      },
+      {
+        "mac": "DA:A1:19:7E:1A:E7",
+        "role": "STA",
+        "packets": 1,
+        "rssi_mean": -82,
+        "rssi_min": -82,
+        "rssi_max": -82
+      },
+      {
+        "mac": "DA:A1:19:4E:60:A5",
+        "role": "STA",
+        "packets": 1,
+        "rssi_mean": -87,
+        "rssi_min": -87,
+        "rssi_max": -87
+      },
+      {
+        "mac": "DA:A1:19:2B:33:F6",
+        "role": "STA",
+        "packets": 1,
+        "rssi_mean": -86,
+        "rssi_min": -86,
+        "rssi_max": -86
+      },
+      {
+        "mac": "DA:A1:19:A4:1F:B2",
+        "role": "STA",
+        "packets": 1,
+        "rssi_mean": -86,
+        "rssi_min": -86,
+        "rssi_max": -86
+      },
+      {
+        "mac": "DA:A1:19:EC:5B:91",
+        "role": "STA",
+        "packets": 1,
+        "rssi_mean": -90,
+        "rssi_min": -90,
+        "rssi_max": -90
+      },
+      {
+        "mac": "DA:A1:19:F5:E3:16",
+        "role": "STA",
+        "packets": 1,
+        "rssi_mean": -87,
+        "rssi_min": -87,
+        "rssi_max": -87
+      }
+    ]
+  },
+  "cryptographic_audit": {
+    "status": "VALID",
+    "is_valid": true,
+    "count": 32,
+    "genesis_hash": "5c407c66e9e7af0c041c87db97437ae3c06ed7ecd57756a7d082467a881be671",
+    "tip_hash": "8187d9fb25758de6016f7e27d9f78609c4bec8dc71a90c09dbd4bbe489ac3eaa"
+  }
+}

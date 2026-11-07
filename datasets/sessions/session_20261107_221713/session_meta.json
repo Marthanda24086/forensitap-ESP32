@@ -1,0 +1,11 @@
+{
+  "session_id": "20261107_221713",
+  "start_iso": "2026-11-07T22:17:13.074193",
+  "end_iso": "2026-11-07T22:17:23.078225",
+  "duration_sec": 10.0,
+  "target_url": "http://192.168.1.26",
+  "total_cycles_completed": 5,
+  "total_blocks_ingested": 32,
+  "final_observed_frames": 115568,
+  "status": "COMPLETED"
+}

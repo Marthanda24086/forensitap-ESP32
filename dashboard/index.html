@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ForensiTap-ESP32 | Wireless Forensic & Security Appliance</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+</head>
+<body>
+
+    <!-- Top Navigation & Control Header -->
+    <header class="top-header">
+        <div class="brand-wrapper">
+            <div class="brand-icon">⚡</div>
+            <div>
+                <div class="brand-title">ForensiTap-ESP32</div>
+                <div class="brand-subtitle">WIRELESS FORENSIC & THREAT DETECTOR</div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs: Overview, Architecture, Live / Demo Dashboard -->
+        <nav class="nav-tabs" aria-label="Main Navigation">
+            <button class="nav-tab active" data-tab="overview" id="tabBtnOverview">
+                <span>📖</span> Overview
+            </button>
+            <button class="nav-tab" data-tab="architecture" id="tabBtnArchitecture">
+                <span>🏗️</span> Architecture
+            </button>
+            <button class="nav-tab" data-tab="dashboard" id="tabBtnDashboard">
+                <span>⚡</span> Live / Demo Dashboard
+            </button>
+        </nav>
+
+        <div class="header-controls">
+            <div class="input-group">
+                <label for="apiUrlInput">APPLIANCE:</label>
+                <input type="text" id="apiUrlInput" value="http://192.168.1.26" placeholder="http://192.168.1.26" style="width: 155px;">
+            </div>
+
+            <div class="input-group">
+                <label for="intervalSelect">REFRESH:</label>
+                <select id="intervalSelect">
+                    <option value="1000">1s</option>
+                    <option value="2000" selected>2s</option>
+                    <option value="5000">5s</option>
+                </select>
+            </div>
+
+            <button id="togglePollingBtn" class="btn">Pause</button>
+            <div id="connectionBadge" class="status-badge">
+                <span class="status-dot"></span> CONNECTING...
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container with Multi-Tier Tab Views -->
+    <main class="dashboard-container">
+
+        <!-- ============================================================== -->
+        <!-- VIEW 1: OVERVIEW & PROJECT SUMMARY                             -->
+        <!-- ============================================================== -->
+        <section id="viewOverview" class="view-section active">
+            
+            <!-- Hero Banner -->
+            <div class="hero-box">
+                <h1 class="hero-title">ForensiTap-ESP32</h1>
+                <p class="hero-subtitle">
+                    A sub-$10 dedicated hardware security appliance that continuously captures 802.11 Wi-Fi frames in promiscuous mode,
+                    detects cyber attacks via online statistical feature analysis and machine learning, and commits every incident to an
+                    immutable SHA-256 cryptographic evidence hash chain.
+                </p>
+                <div class="hero-badges">
+                    <span class="hero-pill">⚡ ESP32-WROOM-32 (Xtensa Dual-Core 240MHz)</span>
+                    <span class="hero-pill">📡 802.11b/g/n Promiscuous Sniffer</span>
+                    <span class="hero-pill">🔒 SHA-256 Tamper-Evident Hash Chain</span>
+                    <span class="hero-pill">💡 &lt; 0.8W Power Consumption</span>
+                    <span class="hero-pill">💵 Under $10 Total Hardware Cost</span>
+                    <span class="hero-pill">🛡️ Zero Packet Injection / Passive Sensor</span>
+                </div>
+                <div class="hero-actions">
+                    <button class="btn btn-primary" onclick="switchTab('dashboard')">
+                        🚀 Launch Interactive Dashboard
+                    </button>
+                    <button class="btn" onclick="switchTab('architecture')">
+                        📐 Explore Architecture
+                    </button>
+                    <a href="https://github.com" target="_blank" class="btn">
+                        🐙 View on GitHub
+                    </a>
+                </div>
+            </div>
+
+            <!-- Value Proposition: What Problem Does It Solve? -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">🎯</span> What Problem Does ForensiTap Solve?
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="feature-grid-3">
+                        <div class="feature-card">
+                            <span class="feature-card-icon">💸</span>
+                            <h3 class="feature-card-title">Eliminates Cost Barrier</h3>
+                            <p class="feature-card-desc">
+                                Enterprise Wireless Intrusion Detection Systems (WIDS) cost $2,000–$5,000 per AP plus recurring subscriptions. ForensiTap provides dedicated 24/7 RF perimeter surveillance for under $10 on off-the-shelf microcontrollers.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-card-icon">🕵️</span>
+                            <h3 class="feature-card-title">Sees Invisible Layer 2 Attacks</h3>
+                            <p class="feature-card-desc">
+                                Host firewalls and endpoint security tools only see IP traffic. They are completely blind to raw 802.11 management attacks such as deauthentication storms, association spoofing, beacon flooding, and rogue access points.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-card-icon">⚖️</span>
+                            <h3 class="feature-card-title">Tamper-Evident Court Integrity</h3>
+                            <p class="feature-card-desc">
+                                Standard syslog files can easily be deleted or modified by attackers who breach the network. ForensiTap seals every security alert inside an immutable SHA-256 cryptographic blockchain that exposes any truncation or tampering.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What Threats Does It Detect? -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">🚨</span> Detected Attack Vectors & Threat Models
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="feature-grid-3">
+                        <div class="feature-card">
+                            <span class="feature-card-icon">⚡</span>
+                            <h3 class="feature-card-title">Deauth / Disassoc Flooding</h3>
+                            <p class="feature-card-desc">
+                                Detects 802.11 management floods used to kick legitimate stations off the network and force WPA 4-way handshake re-authentications.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-card-icon">📈</span>
+                            <h3 class="feature-card-title">Statistical Traffic Spikes</h3>
+                            <p class="feature-card-desc">
+                                Real-time Welford Z-score tracking flags anomalous surges in packet rates exceeding baseline profile bounds (+3.0σ).
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-card-icon">📻</span>
+                            <h3 class="feature-card-title">Rogue AP & Evil Twin Emergence</h3>
+                            <p class="feature-card-desc">
+                                Tracks unique BSSID/MAC appearances and alerts when unauthorized access points or unfamiliar transmitter radios broadcast nearby.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-card-icon">🌊</span>
+                            <h3 class="feature-card-title">Micro-Burst Anomalies</h3>
+                            <p class="feature-card-desc">
+                                Computes peak-to-average frame ratios across sliding 10-second sub-windows to expose stealthy reconnaissance scans.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-card-icon">🤖</span>
+                            <h3 class="feature-card-title">Host-Side Machine Learning</h3>
+                            <p class="feature-card-desc">
+                                Offloads high-dimensional telemetry vectors to an Isolation Forest / Robust MAD anomaly classifier running in Python.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <span class="feature-card-icon">🔒</span>
+                            <h3 class="feature-card-title">Cryptographic Hash Tampering</h3>
+                            <p class="feature-card-desc">
+                                Validates mathematical continuity of SHA-256 hashes linking every historical event block back to the Genesis anchor.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Architecture Teaser Banner -->
+            <div class="arch-card" style="text-align: center; padding: 2rem;">
+                <h3 style="color:#fff; font-size:1.3rem; margin-bottom: 0.5rem;">Ready to See How It Works Under the Hood?</h3>
+                <p style="color:var(--text-secondary); max-width:650px; margin: 0 auto 1.25rem;">
+                    Examine the Xtensa dual-core FreeRTOS pipeline, single-radio promiscuous coexistence, Welford statistical engine, and blockchain verification.
+                </p>
+                <button class="btn btn-primary" onclick="switchTab('architecture')">
+                    View Complete System Architecture →
+                </button>
+            </div>
+
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- VIEW 2: SYSTEM ARCHITECTURE & FLOW                             -->
+        <!-- ============================================================== -->
+        <section id="viewArchitecture" class="view-section">
+            
+            <div class="hero-box" style="padding: 1.75rem;">
+                <h2 class="hero-title" style="font-size: 1.7rem;">System Architecture & Dataflow</h2>
+                <p class="hero-subtitle" style="margin-bottom: 0;">
+                    ForensiTap-ESP32 executes a multi-tiered forensic telemetry pipeline spanning raw hardware RF ingress, FreeRTOS queueing, online statistical feature extraction, heuristic anomaly detection, and tamper-evident cryptographic logging.
+                </p>
+            </div>
+
+            <!-- Architecture Flow Cards -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">📊</span> Multi-Tiered Architecture Pipeline
+                    </div>
+                </div>
+                <div class="card-body">
+                    
+                    <div class="arch-layer-box">
+                        <div class="arch-layer-title">Tier 1: Physical Radio Ingress & Promiscuous Sniffer (Core 0)</div>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+                            Hardware 2.4 GHz 802.11 PHY operating in promiscuous monitor mode. The Promiscuous RX callback runs directly within high-priority ISR context. It performs zero memory copies and zero heap allocations, extracting pure metadata (RSSI, frame length, frame type/subtype, channel, sequence control) into a lightweight 32-byte <code>wifi_frame_meta_t</code> struct.
+                        </p>
+                    </div>
+
+                    <div class="arch-layer-box">
+                        <div class="arch-layer-title">Tier 2: FreeRTOS Ring Queue & Decoupling Buffer</div>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+                            A thread-safe 64-element FreeRTOS queue safely absorbs packet rate bursts up to 300+ frames per second without dropping frames or triggering watchdog timeouts. The queue decouples the high-speed RX ISR from downstream statistical math.
+                        </p>
+                    </div>
+
+                    <div class="arch-layer-box">
+                        <div class="arch-layer-title">Tier 3: Metadata Processing & LRU Device Tracking Table</div>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+                            De-duplicates and indexes observed transmitters using a 32-slot Least Recently Used (LRU) hash table. Tracks MAC addresses, transmitter roles (AP vs Station), packet frequencies, and smoothed RSSI values without storing raw payloads—ensuring complete user privacy and zero GDPR/wiretap compliance exposure.
+                        </p>
+                    </div>
+
+                    <div class="arch-layer-box">
+                        <div class="arch-layer-title">Tier 4: Statistical Feature Engine (Welford's Algorithm)</div>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+                            Calculates dynamic running metrics across sliding 10-second aggregation windows: Window FPS, Byte Rate (KB/s), Average Frame Size, Management Frame Ratio, and Traffic Burstiness Score. Computes running mean and variance in a single pass with numerical stability using Welford's algorithm to generate real-time Z-scores.
+                        </p>
+                    </div>
+
+                    <div class="arch-layer-box">
+                        <div class="arch-layer-title">Tier 5: Edge Heuristic Anomaly Detector</div>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+                            Runs 5 deterministic detection rules on each feature window:
+                            <strong>TrafficSpikeRule</strong> (Z-Score &gt; +3.0σ),
+                            <strong>MgmtAnomalyRule</strong> (Management frame ratio &gt; 60%),
+                            <strong>NewDeviceRule</strong> (Unrecognized MAC or rogue AP),
+                            <strong>BurstAnomalyRule</strong> (Burstiness score &gt; 4.0), and
+                            <strong>SystemHealthRule</strong> (Low heap / buffer drops).
+                        </p>
+                    </div>
+
+                    <div class="arch-layer-box">
+                        <div class="arch-layer-title">Tier 6: Cryptographic Forensic Logger (SHA-256 Blockchain)</div>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+                            Every alert and significant state change is minted into a tamper-evident evidence block: <code>Block_Hash = SHA-256(Index || Timestamp || Event_Type || Description || Prev_Hash)</code>. An in-memory 32-block ring window provides continuous mathematical integrity checks via one-click auditing.
+                        </p>
+                    </div>
+
+                    <div class="arch-layer-box">
+                        <div class="arch-layer-title">Tier 7: Coexistence & Embedded REST API (Core 1)</div>
+                        <p style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">
+                            The ESP32 maintains Wi-Fi Station connection while concurrently operating in promiscuous mode on Channel 11. An embedded HTTP micro-server serves JSON telemetry endpoints (<code>/api/health</code>, <code>/api/stats</code>, <code>/api/features</code>, <code>/api/devices</code>, <code>/api/alerts</code>, <code>/api/logs</code>, <code>/api/logs/verify</code>, <code>/api/export</code>).
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Hardware Coexistence Diagram -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span class="card-title-icon">⚙️</span> Dual-Core Xtensa Resource Allocation
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>CPU Core</th>
+                                    <th>Subsystems Assigned</th>
+                                    <th>Priority</th>
+                                    <th>Execution Guarantee</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Core 0 (PRO_CPU)</strong></td>
+                                    <td>Promiscuous RX Sniffer Callback, FreeRTOS Ingress Ring Queue, Low-Level Wi-Fi Driver</td>
+                                    <td><span class="badge badge-critical">ISR Priority</span></td>
+                                    <td>Zero-drop frame ingestion up to 350 fps; never blocked by HTTP requests</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Core 1 (APP_CPU)</strong></td>
+                                    <td>Feature Engine, Anomaly Detector, SHA-256 Evidence Chain, Web API Server, Periodic Heartbeat</td>
+                                    <td><span class="badge badge-info">Task Priority 1–5</span></td>
+                                    <td>Executes analytical routines every 2s; responds to browser HTTP requests in &lt;15ms</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button class="btn btn-primary" onclick="switchTab('dashboard')">
+                    ⚡ Open Live / Demo Monitoring Dashboard
+                </button>
+            </div>
+
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- VIEW 3: LIVE & DEMO DASHBOARD (FULL TELEMETRY)                 -->
+        <!-- ============================================================== -->
+        <section id="viewDashboard" class="view-section">
+
+            <!-- Interactive Demo Simulation Toolbar -->
+            <div class="sim-toolbar">
+                <div class="sim-toolbar-title">
+                    <span>🎮</span>
+                    <span><strong>INTERACTIVE SIMULATOR:</strong> Test Forensic Detection & Cryptographic Audit</span>
+                </div>
+                <div class="sim-buttons">
+                    <button id="simModeToggleBtn" class="btn btn-primary" onclick="toggleSimMode()">
+                        Mode: Demo Simulator
+                    </button>
+                    <button class="btn btn-danger" onclick="triggerSimAttack('deauth')">
+                        ⚡ Simulate Deauth Flood
+                    </button>
+                    <button class="btn btn-danger" onclick="triggerSimAttack('spike')">
+                        📈 Simulate Traffic Spike
+                    </button>
+                    <button class="btn" onclick="triggerSimAttack('rogue')">
+                        📡 Simulate Rogue AP
+                    </button>
+                    <button class="btn" onclick="triggerSimAttack('tamper')">
+                        🔒 Test Tamper Detection
+                    </button>
+                    <button class="btn" onclick="resetSimData()">
+                        🔄 Reset Baseline
+                    </button>
+                </div>
+            </div>
+
+            <!-- Top KPI Metric Overview -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-label">SYSTEM UPTIME</div>
+                    <div id="valUptime" class="kpi-value">0s</div>
+                    <div id="subFirmware" class="kpi-subtext">v1.0.0-stage17</div>
+                </div>
+
+                <div class="kpi-card kpi-green">
+                    <div class="kpi-label">OBSERVED TRAFFIC</div>
+                    <div id="valFps" class="kpi-value">0 fps</div>
+                    <div id="valTotalFrames" class="kpi-subtext">0 total frames</div>
+                </div>
+
+                <div class="kpi-card kpi-purple">
+                    <div class="kpi-label">ACTIVE RADIO</div>
+                    <div id="valChannel" class="kpi-value">CH 11</div>
+                    <div id="valRssi" class="kpi-subtext">-55 dBm (STA)</div>
+                </div>
+
+                <div class="kpi-card kpi-amber">
+                    <div class="kpi-label">TRACKED PEERS</div>
+                    <div id="valPeers" class="kpi-value">0 / 32</div>
+                    <div id="valDropped" class="kpi-subtext">0 dropped</div>
+                </div>
+
+                <div class="kpi-card kpi-green">
+                    <div class="kpi-label">EVIDENCE CHAIN</div>
+                    <div id="valBlocksMinted" class="kpi-value">0 minted</div>
+                    <div id="chainStatusBadge" class="kpi-subtext" style="color:var(--green-success)">VERIFIED INTACT</div>
+                </div>
+            </div>
+
+            <!-- Main 2-Column Content Grid -->
+            <div class="main-grid">
+
+                <!-- Left Column: Graphs & Detailed Tables -->
+                <div class="left-col">
+
+                    <!-- Real-Time Traffic Graph -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">📈</span> Live 802.11 Frame Rate (FPS) & Baseline Profile
+                            </div>
+                            <span id="subIpAddress" class="badge badge-sta">192.168.1.26</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="trafficChartCanvas"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tracked Devices Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">📡</span> Active Tracked Devices (LRU Eviction Table)
+                            </div>
+                            <span id="deviceCountBadge" class="badge badge-ap">0 active</span>
+                        </div>
+                        <div class="card-body" style="padding:0">
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>MAC Address</th>
+                                            <th>Role</th>
+                                            <th>Observed Frames</th>
+                                            <th>Signal RSSI</th>
+                                            <th>Last Seen</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="devicesTableBody">
+                                        <tr><td colspan="5" style="text-align:center;color:#64748b">Polling device table...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SHA-256 Tamper-Evident Evidence Log -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">🔒</span> SHA-256 Tamper-Evident Evidence Chain
+                            </div>
+                            <div style="display:flex;gap:0.5rem">
+                                <button id="auditChainBtn" class="btn btn-primary" style="padding:0.25rem 0.6rem;font-size:0.75rem">Audit Chain Now</button>
+                                <button id="exportCsvBtn" class="btn" style="padding:0.25rem 0.6rem;font-size:0.75rem">Export CSV</button>
+                            </div>
+                        </div>
+                        <div class="card-body" style="padding:0">
+                            <div style="padding:0.6rem 1rem;background:#0d1322;border-bottom:1px solid var(--border-color);font-size:0.75rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem">
+                                <span><strong>Genesis Hash:</strong> <span id="genesisHashText" style="color:var(--cyan-primary);font-family:var(--font-mono)">---</span></span>
+                                <span><strong>Chain Tip:</strong> <span id="tipHashText" style="color:var(--cyan-primary);font-family:var(--font-mono)">---</span></span>
+                            </div>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Index</th>
+                                            <th>Uptime</th>
+                                            <th>Event Type</th>
+                                            <th>Payload Summary</th>
+                                            <th>Prev Hash</th>
+                                            <th>Block Hash</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="evidenceTableBody">
+                                        <tr><td colspan="6" style="text-align:center;color:#64748b">Loading evidence chain...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Features & Anomaly Alerts -->
+                <div class="right-col">
+
+                    <!-- Feature Vector Inspection -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">⚙️</span> Statistical Feature Vector (10s Window)
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="feature-list">
+                                <div class="feature-box">
+                                    <div class="feature-box-label">Window FPS</div>
+                                    <div id="featWindowFps" class="feature-box-val">0.0 fps</div>
+                                </div>
+                                <div class="feature-box">
+                                    <div class="feature-box-label">Byte Rate</div>
+                                    <div id="featByteRate" class="feature-box-val">0.0 KB/s</div>
+                                </div>
+                                <div class="feature-box">
+                                    <div class="feature-box-label">Avg Frame Size</div>
+                                    <div id="featAvgSize" class="feature-box-val">0 B</div>
+                                </div>
+                                <div class="feature-box">
+                                    <div class="feature-box-label">Mgmt Frame Ratio</div>
+                                    <div id="featMgmtRatio" class="feature-box-val">0.0%</div>
+                                </div>
+                                <div class="feature-box">
+                                    <div class="feature-box-label">Traffic Burstiness</div>
+                                    <div id="featBurstScore" class="feature-box-val">1.00</div>
+                                </div>
+                                <div class="feature-box">
+                                    <div class="feature-box-label">Available Heap</div>
+                                    <div id="valHeap" class="feature-box-val">0 KB</div>
+                                </div>
+                            </div>
+                            <div style="margin-top:0.85rem;padding:0.6rem 0.8rem;background:#0f172a;border-radius:6px;border:1px solid var(--border-color);font-size:0.75rem">
+                                <div style="color:var(--text-muted);margin-bottom:0.2rem">WELFORD RUNNING BASELINE:</div>
+                                <div id="featBaseline" style="font-family:var(--font-mono);color:#fff">Warming up...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Anomaly & Security Alerts Feed -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span class="card-title-icon">🚨</span> Real-Time Security Alerts Feed
+                            </div>
+                            <span id="alertCountBadge" class="badge badge-medium">0 stored</span>
+                        </div>
+                        <div class="card-body" style="padding:0.85rem">
+                            <div id="alertsContainer" class="alerts-list">
+                                <div style="text-align:center;color:#64748b;padding:1.5rem">Listening for security alerts...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Notification Toast Element -->
+    <div id="dashboardToast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
