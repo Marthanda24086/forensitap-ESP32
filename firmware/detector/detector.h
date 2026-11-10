@@ -7,10 +7,11 @@
 #include "system_config.h"
 #include "events.h"
 #include "feature_engine.h"
+#include "edge_ml_classifier.h"
 
 /**
  * @file detector.h
- * @brief Rule-based deterministic anomaly detection engine.
+ * @brief Rule-based deterministic anomaly detection & Edge ML inference engine.
  *
  * ForensiTap-ESP32 Appliance
  */
@@ -35,6 +36,8 @@ struct DetectorThresholds {
     float    spikeZScore;          ///< Z-score threshold for traffic spikes (default: 3.0)
     float    mgmtRatioThreshold;   ///< Threshold for management frame ratio (default: 0.60 = 60%)
     float    burstScoreThreshold;  ///< Threshold for burstiness score (default: 5.0)
+    float    deauthRateThreshold;  ///< Threshold for deauth frame rate in fps (default: 3.0)
+    float    deauthRatioThreshold; ///< Threshold for deauth+disassoc ratio (default: 0.15 = 15%)
     uint32_t alertCooldownMs;      ///< Minimum time between recurring rule alerts (default: 30000 ms)
 
     static DetectorThresholds createDefault() {
@@ -42,6 +45,8 @@ struct DetectorThresholds {
         t.spikeZScore = 3.0f;
         t.mgmtRatioThreshold = 0.60f;
         t.burstScoreThreshold = 5.0f;
+        t.deauthRateThreshold = 3.0f;
+        t.deauthRatioThreshold = 0.15f;
         t.alertCooldownMs = 30000;
         return t;
     }
@@ -61,6 +66,7 @@ public:
 
     // External Event Ingestion
     void notifyNewDevice(const char* macStr, bool isAp, int8_t rssi);
+    void notifyRssiAnomaly(const char* macStr, int8_t oldRssi, int8_t newRssi);
 
     // Alert Buffer Retrieval
     uint16_t getAlertCount() const { return m_alertCount; }
@@ -80,6 +86,8 @@ private:
     void checkRule2ManagementAnomaly(const FeatureVector& feat, unsigned long currentMillis);
     void checkRule4ActivityBurst(const FeatureVector& feat, unsigned long currentMillis);
     void checkRule5MonitoringHealth(unsigned long currentMillis);
+    void checkRule6DeauthFlood(const FeatureVector& feat, unsigned long currentMillis);
+    void checkRule7EdgeML(const FeatureVector& feat, unsigned long currentMillis);
 
     DetectorThresholds m_thresholds;
 
@@ -93,6 +101,9 @@ private:
     unsigned long m_lastMgmtAnomalyMs;
     unsigned long m_lastBurstAlertMs;
     unsigned long m_lastHealthAlertMs;
+    unsigned long m_lastDeauthAlertMs;
+    unsigned long m_lastRssiAnomalyMs;
+    unsigned long m_lastEdgeMlAlertMs;
     uint32_t      m_lastObservedDroppedCount;
     unsigned long m_lastRuleEvalMillis;
 };

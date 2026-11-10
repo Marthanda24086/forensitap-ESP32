@@ -1,0 +1,16 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary docx scratch files
+test_*.docx
+test_drawing_copy.py
+test_extract.py
+test_fix_settings.py
+test_in_place_run.py
+test_omml.py
+
+# OS metadata
+Thumbs.db
+.DS_Store

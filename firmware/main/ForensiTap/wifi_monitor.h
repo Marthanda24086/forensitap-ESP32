@@ -45,6 +45,7 @@ struct DeviceRecord {
     uint32_t firstSeenMs;
     uint32_t lastSeenMs;
     int8_t   lastRssi;
+    int8_t   prevRssi;
     int8_t   minRssi;
     int8_t   maxRssi;
     bool     isAccessPoint;

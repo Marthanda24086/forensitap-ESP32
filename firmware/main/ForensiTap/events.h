@@ -22,6 +22,8 @@ enum class EventType : uint8_t {
     NEW_DEVICE_OBSERVED,        ///< First observation of an unseen MAC address (Informational)
     ACTIVITY_DEVIATION,         ///< Significant behavioral departure from baseline profile
     MONITOR_HEALTH_ALERT,       ///< Frame buffer saturation, dropped packets, or sniffer fault
+    DEAUTH_FLOOD_ATTACK,        ///< Active 802.11 Deauth/Disassoc flood detected
+    EVIL_TWIN_SUSPECTED,        ///< Suspected Rogue AP / BSSID spoofing via RSSI or duplicate beacon
     TAMPER_ALERT,               ///< Physical enclosure breach or magnetic field interruption
     STORAGE_WARNING,            ///< Non-volatile flash wear or storage budget exhaustion
     SYSTEM_ERROR                ///< Critical hardware or software runtime failure
@@ -67,6 +69,8 @@ inline const char* eventTypeToString(EventType type) {
         case EventType::NEW_DEVICE_OBSERVED:  return "NEW_DEVICE_OBSERVED";
         case EventType::ACTIVITY_DEVIATION:   return "ACTIVITY_DEVIATION";
         case EventType::MONITOR_HEALTH_ALERT: return "MONITOR_HEALTH_ALERT";
+        case EventType::DEAUTH_FLOOD_ATTACK:  return "DEAUTH_FLOOD_ATTACK";
+        case EventType::EVIL_TWIN_SUSPECTED:  return "EVIL_TWIN_SUSPECTED";
         case EventType::TAMPER_ALERT:         return "TAMPER_ALERT";
         case EventType::STORAGE_WARNING:      return "STORAGE_WARNING";
         case EventType::SYSTEM_ERROR:         return "SYSTEM_ERROR";

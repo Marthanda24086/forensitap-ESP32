@@ -155,12 +155,21 @@ void ForensiTapWifiMonitor::updateDeviceTable(const uint8_t* mac, int8_t rssi, u
     // 1. Search for existing entry in table
     for (size_t i = 0; i < MAX_TRACKED_DEVICES; ++i) {
         if (m_deviceTable[i].inUse && memcmp(m_deviceTable[i].mac, mac, 6) == 0) {
+            int8_t rssiDelta = abs((int)rssi - (int)m_deviceTable[i].lastRssi);
+            m_deviceTable[i].prevRssi = m_deviceTable[i].lastRssi;
             m_deviceTable[i].frameCount++;
             m_deviceTable[i].lastSeenMs = timestampMs;
             m_deviceTable[i].lastRssi = rssi;
             if (rssi < m_deviceTable[i].minRssi) m_deviceTable[i].minRssi = rssi;
             if (rssi > m_deviceTable[i].maxRssi) m_deviceTable[i].maxRssi = rssi;
             if (isAp) m_deviceTable[i].isAccessPoint = true;
+
+            // Evil Twin / RSSI Spoofing Detection:
+            if (isAp && rssiDelta >= 28 && m_deviceTable[i].frameCount > 6) {
+                char macStr[18];
+                m_deviceTable[i].formatMac(macStr, sizeof(macStr));
+                g_detector.notifyRssiAnomaly(macStr, m_deviceTable[i].prevRssi, rssi);
+            }
             return;
         }
     }
@@ -226,7 +235,7 @@ void ForensiTapWifiMonitor::processObservation(const FrameObservation& obs) {
     }
 
     // 3. Feed statistical feature engine
-    g_featureEngine.recordFrame(obs.length, obs.frameType);
+    g_featureEngine.recordFrame(obs.length, obs.frameType, obs.frameSubtype);
 
     // 4. Extract and track transmitting device
     if (obs.hasSourceMac && isValidUnicastMac(obs.sourceMac)) {

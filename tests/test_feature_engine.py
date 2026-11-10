@@ -82,5 +82,37 @@ class TestFeatureEngine(unittest.TestCase):
         self.assertAlmostEqual(mean, expected_mean, places=5)
         self.assertAlmostEqual(calculated_std, expected_std, places=5)
 
+    def test_subtype_and_deauth_calculations(self):
+        # 10 buckets with granular subtypes
+        buckets = [
+            {'frames': 50, 'mgmt': 30, 'deauth': 20, 'disassoc': 5, 'beacon': 5},
+            {'frames': 60, 'mgmt': 40, 'deauth': 25, 'disassoc': 5, 'beacon': 10},
+        ]
+        window_duration = 10.0
+        total_frames = sum(b['frames'] for b in buckets)
+        total_deauth = sum(b['deauth'] for b in buckets)
+        total_disassoc = sum(b['disassoc'] for b in buckets)
+
+        deauth_rate = total_deauth / window_duration
+        disassoc_rate = total_disassoc / window_duration
+        deauth_ratio = (total_deauth + total_disassoc) / total_frames if total_frames > 0 else 0.0
+
+        self.assertAlmostEqual(deauth_rate, 4.5)
+        self.assertAlmostEqual(disassoc_rate, 1.0)
+        self.assertAlmostEqual(deauth_ratio, 55.0 / 110.0)
+
+    def test_adaptive_ewma_baseline(self):
+        rates = [100.0, 110.0, 95.0, 105.0]
+        alpha = 0.05
+        ewma = rates[0]
+        for r in rates[1:]:
+            ewma = alpha * r + (1.0 - alpha) * ewma
+
+        # Expected value verification
+        e1 = 0.05 * 110.0 + 0.95 * 100.0 # 100.5
+        e2 = 0.05 * 95.0 + 0.95 * e1     # 100.225
+        e3 = 0.05 * 105.0 + 0.95 * e2    # 100.46375
+        self.assertAlmostEqual(ewma, e3, places=4)
+
 if __name__ == '__main__':
     unittest.main()

@@ -12,6 +12,9 @@ ForensiTapDetector::ForensiTapDetector()
       m_lastMgmtAnomalyMs(0),
       m_lastBurstAlertMs(0),
       m_lastHealthAlertMs(0),
+      m_lastDeauthAlertMs(0),
+      m_lastRssiAnomalyMs(0),
+      m_lastEdgeMlAlertMs(0),
       m_lastObservedDroppedCount(0),
       m_lastRuleEvalMillis(0) {
     m_thresholds = DetectorThresholds::createDefault();
@@ -19,10 +22,13 @@ ForensiTapDetector::ForensiTapDetector()
 }
 
 bool ForensiTapDetector::init(const SystemConfig& config) {
-    LOG_INFO("DET", "Initializing Deterministic Anomaly Detector subsystem...");
+    LOG_INFO("DET", "Initializing Deterministic Anomaly Detector & Edge ML Classifier...");
     m_alertCount = 0;
     m_totalAlertsGenerated = 0;
     m_lastRuleEvalMillis = millis();
+    m_lastDeauthAlertMs = 0;
+    m_lastRssiAnomalyMs = 0;
+    m_lastEdgeMlAlertMs = 0;
     return true;
 }
 
@@ -69,6 +75,19 @@ void ForensiTapDetector::notifyNewDevice(const char* macStr, bool isAp, int8_t r
     snprintf(buf, sizeof(buf), "New device observed: [%s] (%s, RSSI: %d dBm)",
              macStr, isAp ? "AP" : "STA", rssi);
     raiseAlert(EventType::NEW_DEVICE_OBSERVED, EventSeverity::SEV_INFO, buf);
+}
+
+void ForensiTapDetector::notifyRssiAnomaly(const char* macStr, int8_t oldRssi, int8_t newRssi) {
+    if (!macStr) return;
+    unsigned long currentMillis = millis();
+    if (currentMillis - m_lastRssiAnomalyMs >= m_thresholds.alertCooldownMs) {
+        m_lastRssiAnomalyMs = currentMillis;
+
+        char buf[96];
+        snprintf(buf, sizeof(buf), "Suspected Rogue AP / Evil Twin: BSSID [%s] RSSI shifted %d -> %d dBm",
+                 macStr, oldRssi, newRssi);
+        raiseAlert(EventType::EVIL_TWIN_SUSPECTED, EventSeverity::SEV_CRITICAL, buf);
+    }
 }
 
 void ForensiTapDetector::checkRule1TrafficSpike(const FeatureVector& feat, unsigned long currentMillis) {
@@ -131,13 +150,45 @@ void ForensiTapDetector::checkRule5MonitoringHealth(unsigned long currentMillis)
     m_lastObservedDroppedCount = currentDropped;
 }
 
+void ForensiTapDetector::checkRule6DeauthFlood(const FeatureVector& feat, unsigned long currentMillis) {
+    // Direct Deauth/Disassoc Subtype evaluation
+    if (feat.deauthRate >= m_thresholds.deauthRateThreshold || 
+        (feat.frameRate > 5.0f && feat.deauthRatio >= m_thresholds.deauthRatioThreshold)) {
+        if (currentMillis - m_lastDeauthAlertMs >= m_thresholds.alertCooldownMs) {
+            m_lastDeauthAlertMs = currentMillis;
+
+            char buf[96];
+            snprintf(buf, sizeof(buf), "Deauth flood attack: %.1f deauth fps (%.1f%% of all frames)",
+                     feat.deauthRate, feat.deauthRatio * 100.0f);
+            raiseAlert(EventType::DEAUTH_FLOOD_ATTACK, EventSeverity::SEV_HIGH, buf);
+        }
+    }
+}
+
+void ForensiTapDetector::checkRule7EdgeML(const FeatureVector& feat, unsigned long currentMillis) {
+    // Run sub-millisecond edge decision tree inference on Core 1
+    EdgeMLInference ml = EdgeMLClassifier::classify(feat);
+    if (ml.isAnomaly && ml.anomalyScore >= 0.85f) {
+        if (currentMillis - m_lastEdgeMlAlertMs >= m_thresholds.alertCooldownMs) {
+            m_lastEdgeMlAlertMs = currentMillis;
+
+            char buf[96];
+            snprintf(buf, sizeof(buf), "Edge ML Anomaly [%s]: Score %.2f | %s",
+                     ml.attackCategory, ml.anomalyScore, ml.rootCauseSummary);
+            raiseAlert(EventType::ACTIVITY_DEVIATION, EventSeverity::SEV_HIGH, buf);
+        }
+    }
+}
+
 void ForensiTapDetector::evaluateRules(unsigned long currentMillis) {
     const FeatureVector& feat = g_featureEngine.getLatestFeatures();
 
+    checkRule6DeauthFlood(feat, currentMillis); // Targeted deauth check first
     checkRule1TrafficSpike(feat, currentMillis);
     checkRule2ManagementAnomaly(feat, currentMillis);
     checkRule4ActivityBurst(feat, currentMillis);
     checkRule5MonitoringHealth(currentMillis);
+    checkRule7EdgeML(feat, currentMillis);
 }
 
 void ForensiTapDetector::update(unsigned long currentMillis) {
@@ -154,13 +205,13 @@ bool ForensiTapDetector::isHealthy() const {
 
 void ForensiTapDetector::printDiagnostics() {
     Serial.println("  +-- [Anomaly Detector Subsystem: DET]");
-    Serial.printf("  |   Rules Active    : TrafficSpike, MgmtAnomaly, NewDevice, Burst, Health\n");
+    Serial.printf("  |   Rules Active    : DeauthFlood, TrafficSpike, MgmtAnomaly, EvilTwin, Burst, Health, EdgeML\n");
     Serial.printf("  |   Total Alerts    : %u raised | Buffer: %u / %u stored\n",
                   m_totalAlertsGenerated, m_alertCount, MAX_STORED_ALERTS);
     if (m_alertCount > 0) {
         const SecurityAlert& last = m_alerts[m_alertCount - 1];
         Serial.printf("  |   Latest Alert    : [#%u][%s] %s\n",
-                      last.eventId, eventSeverityToString(last.severity), last.description);
+                       last.eventId, eventSeverityToString(last.severity), last.description);
     }
     Serial.println("  +------------------------------------");
 }

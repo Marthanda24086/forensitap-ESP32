@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Hardware: ESP32](https://img.shields.io/badge/Hardware-ESP32--WROOM--32-red.svg)](https://www.espressif.com/)
-[![Tests: 29 Passed](https://img.shields.io/badge/Tests-29%20Passed%20(100%25)-brightgreen.svg)](tests/)
+[![Tests: 33 Passed](https://img.shields.io/badge/Tests-33%20Passed%20(100%25)-brightgreen.svg)](tests/)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-cyan.svg)](https://marthanda24086.github.io/forensitap-ESP32/)
 [![Python: 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](laptop/)
 [![Power: <0.8W](https://img.shields.io/badge/Power-<0.8W-green.svg)](documentation/HOW_IT_WORKS_AND_WHAT_IT_SOLVES.md)
@@ -11,10 +11,10 @@ ForensiTap-ESP32 is a low-cost, dedicated hardware security appliance built on a
 
 ---
 
-### 🌐 Interactive Web Demo
+### 🌐 Next-Gen Digital Product & Interactive Web Console
 
-> **Live Interactive Simulator:** [https://marthanda24086.github.io/forensitap-ESP32/](https://marthanda24086.github.io/forensitap-ESP32/)  
-> Explore the 3-tier presentation website: **Overview**, **Architecture**, and **Interactive Dashboard** (with one-click deauthentication attack simulation, traffic burst injection, and cryptographic tamper detection).
+> **Live Interactive Experience:** [https://marthanda24086.github.io/forensitap-ESP32/](https://marthanda24086.github.io/forensitap-ESP32/)  
+> Features 5 dedicated views: **SOC Cockpit**, **2.4 GHz Airspace Radar** (interactive canvas with device HUD hover inspection), **SHA-256 Blockchain Explorer** (with interactive 1-byte tamper simulation), **Architecture Pipeline**, and **Docs & Specifications**. Supports **WebSerial API** for direct in-browser USB hardware connection.
 
 ---
 

@@ -76,9 +76,19 @@ class DetectorSimulator:
                 self.last_health_alert_ms = current_ms
             self.last_observed_dropped = dropped_frames
 
+        # Rule 6: Deauth Flood Attack
+        deauth_rate = feat.get('deauth_rate', 0.0)
+        deauth_ratio = feat.get('deauth_ratio', 0.0)
+        if deauth_rate >= 3.0 or (feat.get('frame_rate_fps', 0.0) > 5.0 and deauth_ratio >= 0.15):
+            self.raise_alert(current_ms, "DEAUTH_FLOOD_ATTACK", "HIGH", f"Deauth flood: {deauth_rate:.1f} fps")
+
     def notify_new_device(self, current_ms: int, mac: str, is_ap: bool, rssi: int):
         dev_type = "AP" if is_ap else "Station"
         self.raise_alert(current_ms, "NEW_DEVICE_OBSERVED", "INFO", f"New {dev_type} discovered: {mac} (RSSI: {rssi} dBm)")
+
+    def notify_rssi_anomaly(self, current_ms: int, mac: str, old_rssi: int, new_rssi: int):
+        self.raise_alert(current_ms, "EVIL_TWIN_SUSPECTED", "CRITICAL",
+                         f"Suspected Rogue AP / Evil Twin: BSSID [{mac}] RSSI shifted {old_rssi} -> {new_rssi} dBm")
 
 
 class TestDetector(unittest.TestCase):
@@ -148,6 +158,26 @@ class TestDetector(unittest.TestCase):
         self.assertEqual(len(self.detector.alerts), 1)
         self.assertEqual(self.detector.alerts[0].event_type, "BUFFER_OVERFLOW_RISK")
         self.assertEqual(self.detector.alerts[0].severity, "ERROR")
+
+    def test_rule6_deauth_flood_attack(self):
+        feat = {
+            'rate_deviation_z_score': 0.5,
+            'frame_rate_fps': 25.0,
+            'mgmt_frame_ratio': 0.4,
+            'deauth_rate': 6.5,
+            'deauth_ratio': 0.26
+        }
+        self.detector.evaluate_features(feat, current_ms=1000, dropped_frames=0)
+        self.assertEqual(len(self.detector.alerts), 1)
+        self.assertEqual(self.detector.alerts[0].event_type, "DEAUTH_FLOOD_ATTACK")
+        self.assertEqual(self.detector.alerts[0].severity, "HIGH")
+
+    def test_rule7_rssi_evil_twin_anomaly(self):
+        self.detector.notify_rssi_anomaly(1000, "64:FB:92:C0:14:80", -55, -22)
+        self.assertEqual(len(self.detector.alerts), 1)
+        self.assertEqual(self.detector.alerts[0].event_type, "EVIL_TWIN_SUSPECTED")
+        self.assertEqual(self.detector.alerts[0].severity, "CRITICAL")
+        self.assertIn("64:FB:92:C0:14:80", self.detector.alerts[0].description)
 
     def test_ring_buffer_fifo_eviction(self):
         # Produce 20 alerts into a 16-slot buffer

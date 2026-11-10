@@ -269,7 +269,7 @@ void ForensiTapApiServer::handleAlerts() {
 void ForensiTapApiServer::handleFeatures() {
     const FeatureVector& feat = g_featureEngine.getLatestFeatures();
 
-    char buf[440];
+    char buf[540];
     snprintf(buf, sizeof(buf),
              "{"
              "\"window_duration_sec\":%u,"
@@ -279,9 +279,14 @@ void ForensiTapApiServer::handleFeatures() {
              "\"unique_peers\":%u,"
              "\"management_frame_ratio\":%.3f,"
              "\"traffic_burst_score\":%.2f,"
+             "\"deauth_rate\":%.2f,"
+             "\"disassoc_rate\":%.2f,"
+             "\"deauth_ratio\":%.3f,"
+             "\"beacon_rate\":%.2f,"
              "\"baseline\":{"
              "\"warmup_ready\":%s,"
              "\"mean_frame_rate\":%.2f,"
+             "\"ewma_mean_frame_rate\":%.2f,"
              "\"std_frame_rate\":%.2f,"
              "\"frame_rate_zscore\":%.2f"
              "}"
@@ -293,8 +298,13 @@ void ForensiTapApiServer::handleFeatures() {
              feat.uniquePeers,
              feat.managementRatio,
              feat.burstScore,
+             feat.deauthRate,
+             feat.disassocRate,
+             feat.deauthRatio,
+             feat.beaconRate,
              feat.baselineReady ? "true" : "false",
              feat.baselineMeanRate,
+             feat.baselineEwmaMean,
              feat.baselineStdDevRate,
              feat.rateDeviationZScore);
     sendJsonResponse(200, buf);
