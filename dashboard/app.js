@@ -560,6 +560,10 @@ function restartPolling() {
 function initTrafficChart() {
     const ctx = document.getElementById('trafficChartCanvas');
     if (!ctx) return;
+    if (typeof Chart === 'undefined') {
+        console.warn('[ForensiTap] Chart.js library is not loaded. Skipping chart initialization.');
+        return;
+    }
 
     for (let i = MAX_CHART_POINTS - 1; i >= 0; i--) {
         chartLabels.push(`-${i * 2}s`);
@@ -1010,7 +1014,6 @@ function updateFeaturesUI(data) {
         chartBaselineData.push(baselineRate);
 
         trafficChart.update();
-    }
     }
 
     // Evaluate Edge ML status
