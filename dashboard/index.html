@@ -60,7 +60,7 @@
 
             <div class="input-group" id="ipInputGroup">
                 <label for="apiUrlInput">APPLIANCE:</label>
-                <input type="text" id="apiUrlInput" value="http://192.168.1.26" placeholder="http://192.168.1.26" style="width: 140px;">
+                <input type="text" id="apiUrlInput" value="" placeholder="http://192.168.1.x" style="width: 140px;">
             </div>
 
             <div class="input-group">
@@ -73,8 +73,8 @@
             </div>
 
             <button id="togglePollingBtn" class="btn">Pause</button>
-            <div id="connectionBadge" class="status-badge online">
-                <span class="status-dot"></span> LIVE CONNECTED
+            <div id="connectionBadge" class="status-badge offline">
+                <span class="status-dot"></span> DISCONNECTED
             </div>
         </div>
     </header>
@@ -176,7 +176,7 @@
                             <div class="card-title">
                                 <span class="card-title-icon">📈</span> Live 802.11 Frame Velocity vs. Adaptive EWMA Profile
                             </div>
-                            <span id="subIpAddress" class="badge badge-sta">192.168.1.26</span>
+                            <span id="subIpAddress" class="badge badge-sta">Disconnected</span>
                         </div>
                         <div class="card-body">
                             <div class="chart-container">

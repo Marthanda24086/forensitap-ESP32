@@ -189,6 +189,34 @@ void loop() {
     }
 
     // -------------------------------------------------------------------------
+    // Task 1b: Machine-Readable Telemetry Stream for Dashboard (every 1000 ms)
+    // -------------------------------------------------------------------------
+    static unsigned long g_lastTelemetryMillis = 0;
+    if (currentMillis - g_lastTelemetryMillis >= 1000) {
+        g_lastTelemetryMillis = currentMillis;
+
+        const FeatureVector& feat = g_featureEngine.getLatestFeatures();
+        float throughputKbps = (feat.byteRate * 8.0f) / 1000.0f;
+        bool isWifiConnected = g_networkManager.isConnected();
+        String ipStr = isWifiConnected ? g_networkManager.getLocalIP().toString() : "0.0.0.0";
+
+        Serial.printf("@FEATURES {\"frame_rate\":%.1f,\"throughput_kbps\":%.1f,\"byte_rate\":%.1f,\"deauth_rate\":%.1f,\"disassoc_rate\":%.1f,\"deauth_ratio\":%.3f,\"burst_score\":%.2f,\"mgmt_ratio\":%.3f,\"unique_peers\":%u,\"uptime_sec\":%lu,\"alerts_total\":%u,\"wifi_connected\":%s,\"ip_address\":\"%s\"}\n",
+            feat.frameRate,
+            throughputKbps,
+            feat.byteRate,
+            feat.deauthRate,
+            feat.disassocRate,
+            feat.deauthRatio,
+            feat.burstScore,
+            feat.managementRatio,
+            feat.uniquePeers,
+            currentMillis / 1000,
+            g_detector.getAlertCount(),
+            isWifiConnected ? "true" : "false",
+            ipStr.c_str());
+    }
+
+    // -------------------------------------------------------------------------
     // Task 2: Subsystem Periodic Execution Slices (Non-blocking)
     // -------------------------------------------------------------------------
     for (size_t i = 0; i < g_moduleCount; ++i) {

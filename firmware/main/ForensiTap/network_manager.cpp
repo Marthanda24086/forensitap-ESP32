@@ -165,6 +165,7 @@ void ForensiTapNetworkManager::onWifiEvent(WiFiEvent_t event, WiFiEventInfo_t in
 
             LOG_INFO("NET", "DHCP Lease Granted! IPv4: %s | Channel: %u | RSSI: %d dBm",
                      s_localIP.toString().c_str(), s_channel, s_rssi);
+            LOG_INFO("NET", "[NET] IPv4 Address : %s", s_localIP.toString().c_str());
             break;
         }
 

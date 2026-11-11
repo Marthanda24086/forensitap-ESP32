@@ -34,7 +34,7 @@ def main():
         print("=" * 70)
         print(f"[*] Dashboard URL    : {url}")
         print(f"[*] Serving Directory: {dashboard_dir}")
-        print(f"[*] Connected ESP32  : http://192.168.1.26")
+        print(f"[*] Appliance Target : Configurable in Dashboard UI or Auto-Detected via USB Serial")
         print("=" * 70)
         print("[*] Press Ctrl+C to terminate local server.")
 

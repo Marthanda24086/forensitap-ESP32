@@ -4,7 +4,7 @@
  */
 
 // Configuration State
-let API_BASE_URL = localStorage.getItem('forensitap_api_url') || 'http://192.168.1.26';
+let API_BASE_URL = localStorage.getItem('forensitap_api_url') || '';
 let refreshIntervalMs = 2000;
 let isPolling = true;
 let pollTimer = null;
@@ -17,6 +17,8 @@ let radarHoverDevice = null;
 let operatingMode = 'live';
 let serialPort = null;
 let serialReader = null;
+let isFetchInProgress = false;
+let lastDataReceivedAt = 0;
 
 // Real-Time Chart Historical Buffer (30 points)
 const MAX_CHART_POINTS = 30;
@@ -142,32 +144,82 @@ function switchTab(tabId) {
 }
 
 // Operating Mode Controls (Live, USB Serial, Demo)
-function setMode(mode) {
+async function setMode(mode) {
+    if (operatingMode === 'usb' && mode !== 'usb') {
+        await disconnectUsbSerial();
+    }
     operatingMode = mode;
     document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
 
-    const badge = document.getElementById('connectionBadge');
     const ipGroup = document.getElementById('ipInputGroup');
 
     if (mode === 'live') {
-        document.getElementById('modeBtnLive').classList.add('active');
+        const btnLive = document.getElementById('modeBtnLive');
+        if (btnLive) btnLive.classList.add('active');
         if (ipGroup) ipGroup.style.display = 'flex';
-        badge.className = 'status-badge online';
-        badge.innerHTML = '<span class="status-dot"></span> LIVE WI-FI';
+        updateConnectionBadge(API_BASE_URL ? 'live' : 'disconnected');
         showToast('Switched to Live Wi-Fi Appliance Mode');
     } else if (mode === 'usb') {
-        document.getElementById('modeBtnUsb').classList.add('active');
+        const btnUsb = document.getElementById('modeBtnUsb');
+        if (btnUsb) btnUsb.classList.add('active');
         if (ipGroup) ipGroup.style.display = 'none';
-        badge.className = 'status-badge usb';
-        badge.innerHTML = '<span class="status-dot"></span> USB SERIAL';
+        updateConnectionBadge('usb');
     } else if (mode === 'demo') {
-        document.getElementById('modeBtnDemo').classList.add('active');
+        const btnDemo = document.getElementById('modeBtnDemo');
+        if (btnDemo) btnDemo.classList.add('active');
         if (ipGroup) ipGroup.style.display = 'none';
-        badge.className = 'status-badge demo';
-        badge.innerHTML = '<span class="status-dot"></span> DEMO SIMULATOR';
+        updateConnectionBadge('demo');
         showToast('Switched to Interactive Demo Mode');
     }
     fetchLatestData();
+}
+
+// Connection Badge State Manager
+function updateConnectionBadge(state) {
+    const badge = document.getElementById('connectionBadge');
+    if (!badge) return;
+
+    if (state === 'live') {
+        badge.className = 'status-badge online';
+        badge.innerHTML = '<span class="status-dot"></span> LIVE WI-FI';
+    } else if (state === 'usb') {
+        badge.className = 'status-badge usb';
+        badge.innerHTML = '<span class="status-dot"></span> USB SERIAL';
+    } else if (state === 'demo') {
+        badge.className = 'status-badge demo';
+        badge.innerHTML = '<span class="status-dot"></span> DEMO SIMULATOR';
+    } else if (state === 'warning') {
+        badge.className = 'status-badge warning';
+        badge.innerHTML = '<span class="status-dot"></span> STALE DATA (>5s)';
+    } else if (state === 'offline') {
+        badge.className = 'status-badge offline';
+        badge.innerHTML = '<span class="status-dot"></span> OFFLINE / RETRYING';
+    } else if (state === 'disconnected') {
+        badge.className = 'status-badge offline';
+        badge.innerHTML = '<span class="status-dot"></span> ' + (API_BASE_URL ? 'DISCONNECTED' : 'AWAITING IP');
+    }
+}
+
+function recordDataActivity(mode) {
+    lastDataReceivedAt = Date.now();
+    updateConnectionBadge(mode);
+}
+
+// WebSerial API Disconnect & Cleanup
+async function disconnectUsbSerial() {
+    try {
+        if (serialReader) {
+            await serialReader.cancel();
+            serialReader.releaseLock();
+            serialReader = null;
+        }
+        if (serialPort) {
+            await serialPort.close();
+            serialPort = null;
+        }
+    } catch (e) {
+        console.warn('[ForensiTap] Error during serial port cleanup:', e);
+    }
 }
 
 // WebSerial API Connection
@@ -178,20 +230,41 @@ async function connectUsbSerial() {
     }
 
     try {
+        if (serialPort) {
+            await disconnectUsbSerial();
+        }
         serialPort = await navigator.serial.requestPort();
         await serialPort.open({ baudRate: 115200 });
-        setMode('usb');
+        await setMode('usb');
+        updateConnectionBadge('usb');
         showToast('Connected to ESP32 via USB Serial (115200 baud)');
         readSerialStream();
     } catch (err) {
         console.warn('WebSerial connection cancelled or failed:', err);
+        if (err.name === 'NotFoundError') {
+            showToast('Serial port selection cancelled');
+        } else if (err.name === 'SecurityError' || (err.message && err.message.toLowerCase().includes('open')) || err.name === 'NetworkError') {
+            alert('Cannot open serial port. If the Arduino IDE Serial Monitor or another tool is currently using this COM port, please close it first and retry.');
+        } else {
+            showToast(`Serial error: ${err.message || err}`);
+        }
+        if (operatingMode === 'usb') {
+            updateConnectionBadge('offline');
+        }
     }
 }
 
+// WebSerial Stream Reader with Robust Multi-line Buffering
 async function readSerialStream() {
-    const textDecoder = new TextDecoderStream();
-    const readableStreamClosed = serialPort.readable.pipeTo(textDecoder.writable);
-    serialReader = textDecoder.readable.getReader();
+    let textDecoder = new TextDecoderStream();
+    let readableStreamClosed = null;
+    try {
+        readableStreamClosed = serialPort.readable.pipeTo(textDecoder.writable);
+        serialReader = textDecoder.readable.getReader();
+    } catch (pipeErr) {
+        console.error('[ForensiTap] Failed to pipe serial stream:', pipeErr);
+        return;
+    }
 
     let buffer = '';
     try {
@@ -200,30 +273,218 @@ async function readSerialStream() {
             if (done) break;
             if (value) {
                 buffer += value;
-                const lines = buffer.split('\n');
-                buffer = lines.pop(); // keep partial line
-                for (const line of lines) {
-                    handleSerialLine(line.trim());
+                const lines = buffer.split(/\r?\n/);
+                buffer = lines.pop(); // Retain incomplete chunk
+                for (const rawLine of lines) {
+                    handleSerialLine(rawLine);
                 }
             }
         }
     } catch (err) {
-        console.error('Serial stream error:', err);
+        console.warn('[ForensiTap] Serial stream terminated:', err);
+        showToast('USB Serial communication interrupted');
     } finally {
-        serialReader.releaseLock();
+        try {
+            if (serialReader) {
+                serialReader.releaseLock();
+                serialReader = null;
+            }
+            if (serialPort) {
+                await serialPort.close();
+                serialPort = null;
+            }
+        } catch (e) {}
+        if (operatingMode === 'usb') {
+            updateConnectionBadge('disconnected');
+        }
     }
 }
 
+// Validate IPv4 Address format
+function isValidIpv4(ip) {
+    if (!ip || typeof ip !== 'string') return false;
+    const parts = ip.trim().split('.');
+    if (parts.length !== 4) return false;
+    for (const part of parts) {
+        if (!/^\d+$/.test(part)) return false;
+        const num = parseInt(part, 10);
+        if (num < 0 || num > 255) return false;
+    }
+    if (ip === '0.0.0.0' || ip === '255.255.255.255') return false;
+    return true;
+}
+
+// Handle Auto-Detected IP Address from ESP32 Serial Output
+function handleDetectedIp(ip) {
+    if (!isValidIpv4(ip)) return;
+    const normalizedIp = ip.trim();
+    const targetUrl = `http://${normalizedIp}`;
+
+    const subIp = document.getElementById('subIpAddress');
+    if (subIp) subIp.textContent = normalizedIp;
+
+    if (API_BASE_URL !== targetUrl) {
+        API_BASE_URL = targetUrl;
+        localStorage.setItem('forensitap_api_url', targetUrl);
+        const apiUrlInput = document.getElementById('apiUrlInput');
+        if (apiUrlInput) {
+            apiUrlInput.value = targetUrl;
+        }
+        showToast(`⚡ ESP32 IP auto-detected: ${normalizedIp}`);
+        console.log(`[ForensiTap] Auto-configured APPLIANCE URL: ${targetUrl}`);
+    }
+}
+
+// Comprehensive Serial Line Parser Supporting Types A, B, and C
 function handleSerialLine(line) {
     if (!line) return;
-    // Check if line contains JSON payload from ESP32
-    if (line.startsWith('{') && line.endsWith('}')) {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    // Type A: Structured Telemetry Message (@FEATURES {...})
+    if (trimmed.startsWith('@FEATURES ')) {
+        const payloadStr = trimmed.slice(10).trim();
         try {
-            const json = JSON.parse(line);
-            if (json.frame_rate !== undefined) {
-                updateFeaturesUI(json);
+            const data = JSON.parse(payloadStr);
+            if (toValidNumber(data.frame_rate) === undefined && toValidNumber(data.throughput_kbps) === undefined && toValidNumber(data.unique_peers) === undefined) {
+                return;
             }
-        } catch (e) {}
+            if (data.ip_address && data.ip_address !== '0.0.0.0') {
+                handleDetectedIp(data.ip_address);
+            }
+            normalizeAndUpdateUI(data);
+            recordDataActivity('usb');
+            return;
+        } catch (e) {
+            console.warn('[ForensiTap] Malformed @FEATURES JSON:', payloadStr, e);
+        }
+    }
+
+    // Type B: Standard JSON Payload ({...})
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        try {
+            const data = JSON.parse(trimmed);
+            if (toValidNumber(data.frame_rate) !== undefined || toValidNumber(data.byte_rate) !== undefined || toValidNumber(data.unique_peers) !== undefined) {
+                if (data.ip_address && data.ip_address !== '0.0.0.0') {
+                    handleDetectedIp(data.ip_address);
+                }
+                normalizeAndUpdateUI(data);
+                recordDataActivity('usb');
+                return;
+            }
+        } catch (e) {
+            // Not a valid JSON or not telemetry JSON
+        }
+    }
+
+    // Type C: Human-Readable Diagnostic Logs
+    // 1. IP Address extraction:
+    // Matches "[NET] IPv4 Address : 192.168.1.45", "DHCP Lease Granted! IPv4: 192.168.1.45", or "IPv4 Address : 192.168.1.45"
+    const ipMatch = trimmed.match(/(?:(?:\[NET\]\s*)?IPv4 Address\s*:\s*|DHCP Lease Granted!\s*IPv4:\s*|Local IP\s*:\s*)([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/i);
+    if (ipMatch && ipMatch[1]) {
+        handleDetectedIp(ipMatch[1]);
+    }
+
+    // 2. Heartbeat extraction:
+    // Supports both new format: "[15000] [INFO] [LIV ] [HEARTBEAT] ForensiTap | WIFI_CONNECTED | MON_ACTIVE | API_ACTIVE | 94 fps | 6 peers | Alerts: 0 | Blocks: 1 | Uptime: 15 s | Heap: 215432 B"
+    // and older format: "[15000] [INFO] [LIV] [HEARTBEAT] ForensiTap | WIFI_CONNECTED | 94 fps | 6 peers | Alerts: 0"
+    if (trimmed.includes('[HEARTBEAT]')) {
+        const hbFps = trimmed.match(/([0-9.]+)\s*fps/i);
+        const hbPeers = trimmed.match(/(\d+)\s*peers/i);
+        const hbAlerts = trimmed.match(/Alerts:\s*(\d+)/i);
+        const hbUptime = trimmed.match(/Uptime:\s*(\d+)\s*s/i);
+
+        if (hbFps || hbPeers || hbAlerts) {
+            normalizeAndUpdateUI({
+                frame_rate: hbFps ? parseFloat(hbFps[1]) : undefined,
+                unique_peers: hbPeers ? parseInt(hbPeers[1], 10) : undefined,
+                alerts_total: hbAlerts ? parseInt(hbAlerts[1], 10) : undefined,
+                uptime_sec: hbUptime ? parseInt(hbUptime[1], 10) : undefined
+            });
+            recordDataActivity('usb');
+            return;
+        }
+    }
+
+    // 3. 10s Window Rates extraction:
+    // Example: "10s Window Rates: 94.5 fps | 32.1 KB/s | Deauth: 0.0 fps"
+    const rateMatch = trimmed.match(/10s Window Rates:\s*([0-9.]+)\s*fps\s*\|\s*([0-9.]+)\s*KB\/s\s*\|\s*Deauth:\s*([0-9.]+)\s*fps/i);
+    if (rateMatch) {
+        const frameRate = parseFloat(rateMatch[1]);
+        const kbPerSec = parseFloat(rateMatch[2]);
+        const deauthRate = parseFloat(rateMatch[3]);
+
+        normalizeAndUpdateUI({
+            frame_rate: frameRate,
+            byte_rate: kbPerSec * 1024.0,
+            throughput_kbps: kbPerSec * 8.0,
+            deauth_rate: deauthRate
+        });
+        recordDataActivity('usb');
+        return;
+    }
+
+    // 4. Subsystem Feature Details (Unique Peers, Burst Score):
+    // Example: "Unique Peers    : 6 devices | Burst Score: 1.20"
+    const peerBurstMatch = trimmed.match(/Unique Peers\s*:\s*(\d+)\s*devices\s*\|\s*Burst Score:\s*([0-9.]+)/i);
+    if (peerBurstMatch) {
+        normalizeAndUpdateUI({
+            unique_peers: parseInt(peerBurstMatch[1], 10),
+            traffic_burst_score: parseFloat(peerBurstMatch[2])
+        });
+        recordDataActivity('usb');
+        return;
+    }
+
+    // 5. Baseline Profile:
+    // Example: "Baseline Profile: Welford: 94.2 fps | EWMA: 94.2 fps | Z-Score: +0.03"
+    const baseMatch = trimmed.match(/Baseline Profile:\s*Welford:\s*([0-9.]+)\s*fps\s*\|\s*EWMA:\s*([0-9.]+)\s*fps\s*\|\s*Z-Score:\s*([+-]?[0-9.]+)/i);
+    if (baseMatch) {
+        normalizeAndUpdateUI({
+            baseline: {
+                warmup_ready: true,
+                mean_frame_rate: parseFloat(baseMatch[1]),
+                ewma_mean_frame_rate: parseFloat(baseMatch[2]),
+                frame_rate_zscore: parseFloat(baseMatch[3])
+            }
+        });
+        recordDataActivity('usb');
+        return;
+    }
+}
+
+// Safely parse finite numbers
+function toValidNumber(val) {
+    if (val === undefined || val === null || val === '') return undefined;
+    const num = Number(val);
+    return (typeof num === 'number' && !isNaN(num) && isFinite(num)) ? num : undefined;
+}
+
+// Telemetry Normalization Pipeline
+function normalizeAndUpdateUI(data) {
+    if (!data) return;
+
+    const normalized = {
+        frame_rate: toValidNumber(data.frame_rate),
+        byte_rate: toValidNumber(data.byte_rate) !== undefined ? toValidNumber(data.byte_rate) : (toValidNumber(data.throughput_kbps) !== undefined ? toValidNumber(data.throughput_kbps) * 125 : undefined),
+        throughput_kbps: toValidNumber(data.throughput_kbps) !== undefined ? toValidNumber(data.throughput_kbps) : (toValidNumber(data.byte_rate) !== undefined ? (toValidNumber(data.byte_rate) * 8.0) / 1000.0 : undefined),
+        deauth_rate: toValidNumber(data.deauth_rate),
+        disassoc_rate: toValidNumber(data.disassoc_rate),
+        deauth_ratio: toValidNumber(data.deauth_ratio),
+        management_frame_ratio: toValidNumber(data.management_frame_ratio) !== undefined ? toValidNumber(data.management_frame_ratio) : toValidNumber(data.mgmt_ratio),
+        traffic_burst_score: toValidNumber(data.traffic_burst_score) !== undefined ? toValidNumber(data.traffic_burst_score) : toValidNumber(data.burst_score),
+        unique_peers: toValidNumber(data.unique_peers),
+        average_frame_size: toValidNumber(data.average_frame_size) !== undefined ? toValidNumber(data.average_frame_size) : toValidNumber(data.avg_frame_size),
+        uptime_sec: toValidNumber(data.uptime_sec),
+        alerts_total: toValidNumber(data.alerts_total),
+        baseline: data.baseline || undefined
+    };
+
+    updateFeaturesUI(normalized);
+
+    if (normalized.uptime_sec !== undefined) {
+        const valUptime = document.getElementById('valUptime');
+        if (valUptime) valUptime.textContent = formatUptime(normalized.uptime_sec);
     }
 }
 
@@ -233,12 +494,34 @@ function initControls() {
     if (apiUrlInput) {
         apiUrlInput.value = API_BASE_URL;
         apiUrlInput.addEventListener('change', () => {
-            API_BASE_URL = apiUrlInput.value.trim().replace(/\/+$/, '');
-            localStorage.setItem('forensitap_api_url', API_BASE_URL);
-            showToast(`Target Appliance updated to: ${API_BASE_URL}`);
+            let val = apiUrlInput.value.trim().replace(/\/+$/, '');
+            if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+                val = 'http://' + val;
+            }
+            API_BASE_URL = val;
+            apiUrlInput.value = val;
+            if (val) {
+                localStorage.setItem('forensitap_api_url', API_BASE_URL);
+                showToast(`Target Appliance updated to: ${API_BASE_URL}`);
+                const subIp = document.getElementById('subIpAddress');
+                if (subIp) subIp.textContent = val.replace(/^https?:\/\//, '');
+            } else {
+                localStorage.removeItem('forensitap_api_url');
+                showToast('Target Appliance IP cleared');
+                const subIp = document.getElementById('subIpAddress');
+                if (subIp) subIp.textContent = 'Disconnected';
+            }
             fetchLatestData();
         });
     }
+
+    // Stale Telemetry Watchdog (>5 seconds without updates)
+    setInterval(() => {
+        if (operatingMode === 'demo') return;
+        if (lastDataReceivedAt > 0 && Date.now() - lastDataReceivedAt > 5000) {
+            updateConnectionBadge('warning');
+        }
+    }, 1000);
 
     const intervalSelect = document.getElementById('intervalSelect');
     if (intervalSelect) {
@@ -555,53 +838,68 @@ async function fetchLatestData() {
         return;
     }
 
+    // Check if target appliance URL is configured
+    if (!API_BASE_URL) {
+        updateConnectionBadge('disconnected');
+        return;
+    }
+
+    if (isFetchInProgress) return; // Prevent overlapping HTTP cycles
+    isFetchInProgress = true;
+
     try {
         const [healthRes, statsRes, featRes, devRes, alertRes, logsRes] = await Promise.allSettled([
-            fetch(`${API_BASE_URL}/api/health`, { signal: AbortSignal.timeout(1800) }),
-            fetch(`${API_BASE_URL}/api/stats`, { signal: AbortSignal.timeout(1800) }),
-            fetch(`${API_BASE_URL}/api/features`, { signal: AbortSignal.timeout(1800) }),
-            fetch(`${API_BASE_URL}/api/devices`, { signal: AbortSignal.timeout(1800) }),
-            fetch(`${API_BASE_URL}/api/alerts`, { signal: AbortSignal.timeout(1800) }),
-            fetch(`${API_BASE_URL}/api/logs`, { signal: AbortSignal.timeout(1800) })
+            fetch(`${API_BASE_URL}/api/health`, { signal: AbortSignal.timeout(2000) }),
+            fetch(`${API_BASE_URL}/api/stats`, { signal: AbortSignal.timeout(2000) }),
+            fetch(`${API_BASE_URL}/api/features`, { signal: AbortSignal.timeout(2000) }),
+            fetch(`${API_BASE_URL}/api/devices`, { signal: AbortSignal.timeout(2000) }),
+            fetch(`${API_BASE_URL}/api/alerts`, { signal: AbortSignal.timeout(2000) }),
+            fetch(`${API_BASE_URL}/api/logs`, { signal: AbortSignal.timeout(2000) })
         ]);
+
+        let anySuccess = false;
 
         if (healthRes.status === 'fulfilled' && healthRes.value.ok) {
             const health = await healthRes.value.json();
             updateHealthUI(health);
+            anySuccess = true;
         }
         if (statsRes.status === 'fulfilled' && statsRes.value.ok) {
             const stats = await statsRes.value.json();
             updateStatsUI(stats);
+            anySuccess = true;
         }
         if (featRes.status === 'fulfilled' && featRes.value.ok) {
             const feat = await featRes.value.json();
-            updateFeaturesUI(feat);
+            normalizeAndUpdateUI(feat);
+            anySuccess = true;
         }
         if (devRes.status === 'fulfilled' && devRes.value.ok) {
             const devData = await devRes.value.json();
             window.lastFetchedDevices = devData.devices || [];
             updateDevicesUI(window.lastFetchedDevices);
+            anySuccess = true;
         }
         if (alertRes.status === 'fulfilled' && alertRes.value.ok) {
             const alertData = await alertRes.value.json();
             updateAlertsUI(alertData.alerts || []);
+            anySuccess = true;
         }
         if (logsRes.status === 'fulfilled' && logsRes.value.ok) {
             const logsData = await logsRes.value.json();
             updateEvidenceUI(logsData);
+            anySuccess = true;
         }
 
-        const badge = document.getElementById('connectionBadge');
-        if (badge) {
-            badge.className = 'status-badge online';
-            badge.innerHTML = '<span class="status-dot"></span> LIVE WI-FI';
+        if (anySuccess) {
+            recordDataActivity('live');
+        } else {
+            updateConnectionBadge('offline');
         }
     } catch (err) {
-        const badge = document.getElementById('connectionBadge');
-        if (badge) {
-            badge.className = 'status-badge offline';
-            badge.innerHTML = '<span class="status-dot"></span> OFFLINE / RETRYING';
-        }
+        updateConnectionBadge('offline');
+    } finally {
+        isFetchInProgress = false;
     }
 }
 
@@ -609,14 +907,16 @@ async function fetchLatestData() {
 function updateHealthUI(data) {
     const valUptime = document.getElementById('valUptime');
     if (valUptime) {
-        const s = data.uptime_sec || Math.floor((data.uptime_ms || 0) / 1000);
+        const s = data.uptime_sec !== undefined ? data.uptime_sec : Math.floor((data.uptime_ms || 0) / 1000);
         valUptime.textContent = formatUptime(s);
     }
     const subFirmware = document.getElementById('subFirmware');
     if (subFirmware) subFirmware.textContent = `${data.firmware_version || 'v1.2.0'} • Xtensa`;
 
     const subIp = document.getElementById('subIpAddress');
-    if (subIp) subIp.textContent = data.ip_address || '192.168.1.26';
+    if (subIp) {
+        subIp.textContent = data.ip_address || (API_BASE_URL ? API_BASE_URL.replace(/^https?:\/\//, '') : 'Disconnected');
+    }
 }
 
 function updateStatsUI(data) {
@@ -628,45 +928,79 @@ function updateStatsUI(data) {
 }
 
 function updateFeaturesUI(data) {
-    const b = data.baseline || {};
-    const featWindowFps = document.getElementById('featWindowFps');
-    if (featWindowFps) featWindowFps.textContent = `${(data.frame_rate || 0).toFixed(1)} fps`;
+    if (!data) return;
 
-    const featByteRate = document.getElementById('featByteRate');
-    if (featByteRate) featByteRate.textContent = `${((data.byte_rate || 0) / 1024.0).toFixed(1)} KB/s`;
+    if (data.frame_rate !== undefined) {
+        const featWindowFps = document.getElementById('featWindowFps');
+        if (featWindowFps) featWindowFps.textContent = `${data.frame_rate.toFixed(1)} fps`;
 
-    const featAvgSize = document.getElementById('featAvgSize');
-    if (featAvgSize) featAvgSize.textContent = `${Math.round(data.average_frame_size || 0)} B`;
+        const valFps = document.getElementById('valFps');
+        if (valFps) valFps.textContent = `${data.frame_rate.toFixed(1)} fps`;
+    }
 
-    const featMgmtRatio = document.getElementById('featMgmtRatio');
-    if (featMgmtRatio) featMgmtRatio.textContent = `${((data.management_frame_ratio || 0) * 100).toFixed(1)}%`;
+    if (data.throughput_kbps !== undefined || data.byte_rate !== undefined) {
+        const featByteRate = document.getElementById('featByteRate');
+        if (featByteRate) {
+            const kbVal = data.throughput_kbps !== undefined ? (data.throughput_kbps / 8.0) : (data.byte_rate / 1024.0);
+            featByteRate.textContent = `${kbVal.toFixed(1)} KB/s`;
+        }
+    }
 
-    const featBurstScore = document.getElementById('featBurstScore');
-    if (featBurstScore) featBurstScore.textContent = (data.traffic_burst_score || 1.0).toFixed(2);
+    if (data.average_frame_size !== undefined) {
+        const featAvgSize = document.getElementById('featAvgSize');
+        if (featAvgSize) featAvgSize.textContent = `${Math.round(data.average_frame_size)} B`;
+    }
 
-    const featDeauthRatio = document.getElementById('featDeauthRatio');
-    if (featDeauthRatio) featDeauthRatio.textContent = `${((data.deauth_ratio || 0) * 100).toFixed(1)}%`;
+    if (data.management_frame_ratio !== undefined) {
+        const featMgmtRatio = document.getElementById('featMgmtRatio');
+        if (featMgmtRatio) featMgmtRatio.textContent = `${(data.management_frame_ratio * 100).toFixed(1)}%`;
+    }
 
-    // Deauth Rate KPI Card
-    const valDeauthRate = document.getElementById('valDeauthRate');
-    if (valDeauthRate) valDeauthRate.textContent = `${(data.deauth_rate || 0).toFixed(1)} fps`;
+    if (data.traffic_burst_score !== undefined) {
+        const featBurstScore = document.getElementById('featBurstScore');
+        if (featBurstScore) featBurstScore.textContent = data.traffic_burst_score.toFixed(2);
+    }
 
-    const valDeauthRatio = document.getElementById('valDeauthRatio');
-    if (valDeauthRatio) valDeauthRatio.textContent = `${((data.deauth_ratio || 0) * 100).toFixed(1)}% of total frames`;
+    if (data.deauth_rate !== undefined) {
+        const valDeauthRate = document.getElementById('valDeauthRate');
+        if (valDeauthRate) valDeauthRate.textContent = `${data.deauth_rate.toFixed(1)} fps`;
+    }
 
-    // Baseline display
-    const featBaseline = document.getElementById('featBaseline');
-    if (featBaseline) {
-        if (b.warmup_ready) {
-            featBaseline.innerHTML = `Mean: <strong>${b.mean_frame_rate.toFixed(1)} fps</strong> | EWMA: <strong>${(b.ewma_mean_frame_rate || b.mean_frame_rate).toFixed(1)} fps</strong> | Z-Score: <strong>${b.frame_rate_zscore >= 0 ? '+' : ''}${b.frame_rate_zscore.toFixed(2)}σ</strong>`;
-        } else {
-            featBaseline.textContent = 'Calibrating background RF profile... (Warm-up in progress)';
+    if (data.deauth_ratio !== undefined) {
+        const featDeauthRatio = document.getElementById('featDeauthRatio');
+        if (featDeauthRatio) featDeauthRatio.textContent = `${(data.deauth_ratio * 100).toFixed(1)}%`;
+
+        const valDeauthRatio = document.getElementById('valDeauthRatio');
+        if (valDeauthRatio) valDeauthRatio.textContent = `${(data.deauth_ratio * 100).toFixed(1)}% of total frames`;
+    }
+
+    if (data.unique_peers !== undefined) {
+        const radarBadge = document.getElementById('radarDeviceCount');
+        if (radarBadge && operatingMode !== 'demo') {
+            radarBadge.textContent = `${data.unique_peers} active blips`;
+        }
+    }
+
+    // Baseline profile display
+    if (data.baseline) {
+        const b = data.baseline;
+        const featBaseline = document.getElementById('featBaseline');
+        if (featBaseline) {
+            if (b.warmup_ready) {
+                const meanStr = b.mean_frame_rate !== undefined ? `${b.mean_frame_rate.toFixed(1)} fps` : 'N/A';
+                const ewmaStr = b.ewma_mean_frame_rate !== undefined ? `${b.ewma_mean_frame_rate.toFixed(1)} fps` : meanStr;
+                const zScoreStr = b.frame_rate_zscore !== undefined ? `${b.frame_rate_zscore >= 0 ? '+' : ''}${b.frame_rate_zscore.toFixed(2)}σ` : '0.00σ';
+                featBaseline.innerHTML = `Mean: <strong>${meanStr}</strong> | EWMA: <strong>${ewmaStr}</strong> | Z-Score: <strong>${zScoreStr}</strong>`;
+            } else {
+                featBaseline.textContent = 'Calibrating background RF profile... (Warm-up in progress)';
+            }
         }
     }
 
     // Update Real-Time Chart
-    if (trafficChart) {
-        const currentRate = data.frame_rate || 0;
+    if (trafficChart && data.frame_rate !== undefined) {
+        const currentRate = data.frame_rate;
+        const b = data.baseline || {};
         const baselineRate = b.ewma_mean_frame_rate || b.mean_frame_rate || currentRate;
 
         chartFpsData.shift();
@@ -676,6 +1010,7 @@ function updateFeaturesUI(data) {
         chartBaselineData.push(baselineRate);
 
         trafficChart.update();
+    }
     }
 
     // Evaluate Edge ML status
@@ -1039,7 +1374,7 @@ function runSimulatorCycle() {
         }
     };
 
-    updateHealthUI({ uptime_sec: simUptimeSec, firmware_version: 'v1.2.0-sim', ip_address: '192.168.1.26' });
+    updateHealthUI({ uptime_sec: simUptimeSec, firmware_version: 'v1.2.0-sim', ip_address: '192.168.4.1 (Simulated)' });
     updateStatsUI({ current_frame_rate: simFps, active_channel: 11 });
     updateFeaturesUI(simData);
     updateDevicesUI(simDevices);

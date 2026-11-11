@@ -68,8 +68,11 @@ void ForensiTapApiServer::printDiagnostics() {
 
 void ForensiTapApiServer::setCorsHeaders() {
     m_server.sendHeader("Access-Control-Allow-Origin", "*");
-    m_server.sendHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-    m_server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+    m_server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    m_server.sendHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    m_server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    m_server.sendHeader("Pragma", "no-cache");
+    m_server.sendHeader("Expires", "0");
 }
 
 void ForensiTapApiServer::sendJsonResponse(int statusCode, const char* jsonPayload) {
@@ -81,6 +84,7 @@ void ForensiTapApiServer::sendJsonResponse(int statusCode, const char* jsonPaylo
 void ForensiTapApiServer::registerRoutes() {
     m_server.on("/", HTTP_GET, [this]() { handleRoot(); });
     m_server.on("/api/health", HTTP_GET, [this]() { handleHealth(); });
+    m_server.on("/api/status", HTTP_GET, [this]() { handleHealth(); });
     m_server.on("/api/stats", HTTP_GET, [this]() { handleStats(); });
     m_server.on("/api/devices", HTTP_GET, [this]() { handleDevices(); });
     m_server.on("/api/alerts", HTTP_GET, [this]() { handleAlerts(); });
@@ -268,13 +272,18 @@ void ForensiTapApiServer::handleAlerts() {
  */
 void ForensiTapApiServer::handleFeatures() {
     const FeatureVector& feat = g_featureEngine.getLatestFeatures();
+    float throughputKbps = (feat.byteRate * 8.0f) / 1000.0f;
+    bool isWifiConnected = g_networkManager.isConnected();
+    String ipStr = isWifiConnected ? g_networkManager.getLocalIP().toString() : "0.0.0.0";
+    unsigned long uptimeSec = millis() / 1000;
 
-    char buf[540];
+    char buf[768];
     snprintf(buf, sizeof(buf),
              "{"
              "\"window_duration_sec\":%u,"
              "\"frame_rate\":%.2f,"
              "\"byte_rate\":%.2f,"
+             "\"throughput_kbps\":%.2f,"
              "\"average_frame_size\":%.2f,"
              "\"unique_peers\":%u,"
              "\"management_frame_ratio\":%.3f,"
@@ -283,6 +292,10 @@ void ForensiTapApiServer::handleFeatures() {
              "\"disassoc_rate\":%.2f,"
              "\"deauth_ratio\":%.3f,"
              "\"beacon_rate\":%.2f,"
+             "\"uptime_sec\":%lu,"
+             "\"alerts_total\":%u,"
+             "\"wifi_connected\":%s,"
+             "\"ip_address\":\"%s\","
              "\"baseline\":{"
              "\"warmup_ready\":%s,"
              "\"mean_frame_rate\":%.2f,"
@@ -294,6 +307,7 @@ void ForensiTapApiServer::handleFeatures() {
              feat.windowDurationSec,
              feat.frameRate,
              feat.byteRate,
+             throughputKbps,
              feat.avgFrameSize,
              feat.uniquePeers,
              feat.managementRatio,
@@ -302,6 +316,10 @@ void ForensiTapApiServer::handleFeatures() {
              feat.disassocRate,
              feat.deauthRatio,
              feat.beaconRate,
+             uptimeSec,
+             g_detector.getAlertCount(),
+             isWifiConnected ? "true" : "false",
+             ipStr.c_str(),
              feat.baselineReady ? "true" : "false",
              feat.baselineMeanRate,
              feat.baselineEwmaMean,

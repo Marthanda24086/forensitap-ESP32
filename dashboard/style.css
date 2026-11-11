@@ -230,6 +230,12 @@ body {
     color: var(--purple-accent);
 }
 
+.status-badge.warning {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: var(--amber-warning);
+}
+
 .status-dot {
     width: 7px;
     height: 7px;
